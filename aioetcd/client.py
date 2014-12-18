@@ -33,7 +33,7 @@ class Client:
         :param loop: event loop to use internaly. If None, use
             asyncio.get_event_loop()
         """
-        self.loop = loop if loop is not None else asyncio.get_event_loop()
+        self.loop = loop or asyncio.get_event_loop()
 
         def uri(host, port):
             return '%s://%s:%d' % (protocol, host, port)
@@ -50,7 +50,7 @@ class Client:
         self.allow_reconnect = allow_reconnect
         self._conn = aiohttp.TCPConnector()
         self._cache_update_scheduled = True
-        self.loop.create_task(self._update_machine_cache())
+        asyncio.async(self._update_machine_cache())
 
     # # high level operations
 
@@ -128,11 +128,13 @@ class Client:
     def leader(self):
         """
         Returns:
-            str. the leader of the cluster.
+            str. the leader of the cluster or None.
         """
+        leader = None
         resp = yield from self._get("/v2/leader")
-        raw = yield from resp.text()
-        return raw
+        if resp.status == 200:
+            leader = yield from resp.text()
+        return leader
 
     @asyncio.coroutine
     def watch(self, key, index=None, timeout=None):
@@ -365,7 +367,7 @@ class Client:
                     self._machine_cache = self._machine_cache[idx:]
                     if not self._cache_update_scheduled:
                         self._cache_update_scheduled = True
-                        self.loop.create_task(self._update_machine_cache())
+                        asyncio.async(self._update_machine_cache())
                 return resp
             except asyncio.TimeoutError:
                 failed = True
