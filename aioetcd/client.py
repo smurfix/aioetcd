@@ -137,7 +137,7 @@ class Client:
         return leader
 
     @asyncio.coroutine
-    def watch(self, key, index=None, timeout=None):
+    def watch(self, key, index=None, timeout=None, **params):
         """
         Blocks until a new event has been received, starting at index 'index'
         :param str key:  key to watch
@@ -146,6 +146,7 @@ class Client:
         :param timeout:  max seconds to wait for a read. If None, no timeout,
             blocks forever
         :type timeout: int or float
+        :param param: see parameters in :func:`read`.
 
         :returns: client.EtcdResult
 
@@ -153,7 +154,7 @@ class Client:
         :raises asyncio.TimeoutError: If timeout is reached.
 
         """
-        params = dict(wait=True)
+        params['wait'] = True
         if index is not None:
             params['waitIndex'] = index
         if timeout is not None:
@@ -167,13 +168,14 @@ class Client:
                     raise
 
     @asyncio.coroutine
-    def watch_iterator(self, key, index=None):
+    def watch_iterator(self, key, index=None, **params):
         """
         return an iterator of self.watch() coroutines
 
         :param str key:  key to watch
         :param int index: (optional) Index to start from. if None, start from
             current index
+        :param param: see parameters in :func:`read`.
         :raises KeyValue:  If the key doesn't exists.
 
         Usage::
@@ -188,14 +190,14 @@ class Client:
         """
         # TODO: add a timeout that raises StopIteration
         if index is None:
-            result = yield from self.read(key)
+            result = yield from self.read(key, params=params)
             index = result.modifiedIndex
-        return iter(self._watch_forever(key, index))
+        return iter(self._watch_forever(key, index, params=params))
 
-    def _watch_forever(self, key, index=None, timeout=None):
+    def _watch_forever(self, key, index=None, timeout=None, **params):
         while 42:
             index += 1
-            yield self.watch(key, index)
+            yield self.watch(key, index, params=params)
 
     @asyncio.coroutine
     def mkdir(self, key, ttl=None):
