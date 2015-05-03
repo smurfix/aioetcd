@@ -52,6 +52,10 @@ class Node:
         head.close(force=True)
         return bool(content)
 
+    def __str__(self):
+        return 'key={}, value={}, expiration={}, ttl={}, raft_index={}'.format(
+            self.key, self.value, self.expiration, self.ttl, self.raft_index)
+
 
 class FileNode(Node):
     def __init__(self, **kwargs):

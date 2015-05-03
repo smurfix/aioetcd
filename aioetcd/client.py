@@ -33,7 +33,7 @@ class Client:
         :param loop: event loop to use internaly. If None, use
             asyncio.get_event_loop()
         """
-        self.loop = loop if loop is not None else asyncio.get_event_loop()
+        self.loop = loop or asyncio.get_event_loop()
 
         def uri(host, port):
             return '%s://%s:%d' % (protocol, host, port)
@@ -50,7 +50,7 @@ class Client:
         self.allow_reconnect = allow_reconnect
         self._conn = aiohttp.TCPConnector()
         self._cache_update_scheduled = True
-        self.loop.create_task(self._update_machine_cache())
+        asyncio.async(self._update_machine_cache())
 
     # # high level operations
 
@@ -128,14 +128,16 @@ class Client:
     def leader(self):
         """
         Returns:
-            str. the leader of the cluster.
+            str. the leader of the cluster or None.
         """
+        leader = None
         resp = yield from self._get("/v2/leader")
-        raw = yield from resp.text()
-        return raw
+        if resp.status == 200:
+            leader = yield from resp.text()
+        return leader
 
     @asyncio.coroutine
-    def watch(self, key, index=None, timeout=None):
+    def watch(self, key, index=None, timeout=None, **params):
         """
         Blocks until a new event has been received, starting at index 'index'
         :param str key:  key to watch
@@ -144,6 +146,7 @@ class Client:
         :param timeout:  max seconds to wait for a read. If None, no timeout,
             blocks forever
         :type timeout: int or float
+        :param param: see parameters in :func:`read`.
 
         :returns: client.EtcdResult
 
@@ -151,7 +154,7 @@ class Client:
         :raises asyncio.TimeoutError: If timeout is reached.
 
         """
-        params = dict(wait=True)
+        params['wait'] = True
         if index is not None:
             params['waitIndex'] = index
         if timeout is not None:
@@ -165,13 +168,14 @@ class Client:
                     raise
 
     @asyncio.coroutine
-    def watch_iterator(self, key, index=None):
+    def watch_iterator(self, key, index=None, **params):
         """
         return an iterator of self.watch() coroutines
 
         :param str key:  key to watch
         :param int index: (optional) Index to start from. if None, start from
             current index
+        :param param: see parameters in :func:`read`.
         :raises KeyValue:  If the key doesn't exists.
 
         Usage::
@@ -186,14 +190,14 @@ class Client:
         """
         # TODO: add a timeout that raises StopIteration
         if index is None:
-            result = yield from self.read(key)
+            result = yield from self.read(key, params=params)
             index = result.modifiedIndex
-        return iter(self._watch_forever(key, index))
+        return iter(self._watch_forever(key, index, params=params))
 
-    def _watch_forever(self, key, index=None, timeout=None):
+    def _watch_forever(self, key, index=None, timeout=None, **params):
         while 42:
             index += 1
-            yield self.watch(key, index)
+            yield self.watch(key, index, params=params)
 
     @asyncio.coroutine
     def mkdir(self, key, ttl=None):
@@ -365,7 +369,7 @@ class Client:
                     self._machine_cache = self._machine_cache[idx:]
                     if not self._cache_update_scheduled:
                         self._cache_update_scheduled = True
-                        self.loop.create_task(self._update_machine_cache())
+                        asyncio.async(self._update_machine_cache())
                 return resp
             except asyncio.TimeoutError:
                 failed = True
