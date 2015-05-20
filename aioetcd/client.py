@@ -111,9 +111,9 @@ class Client:
         key = key.lstrip('/')
 
         if recursive is not None:
-            params['recursive'] = recursive and "true" or "false"
+            params['recursive'] = "true" if recursive else "false"
         if dir is not None:
-            dir['dir'] = dir and "true" or "false"
+            params['dir'] = "true" if dir else "false"
 
         response = yield from self._delete("/v2/keys/%s" % key, params=params)
         return self._result_from_response(response)
