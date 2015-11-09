@@ -1,0 +1,32 @@
+Source: aioetcd
+Maintainer: Matthias Urlichs <matthias@urlichs.de>
+Section: python
+Priority: optional
+Build-Depends: python3-setuptools, python3-all, debhelper (>= 9)
+Standards-Version: 3.9.1
+
+Package: python3-aioetcd
+Architecture: all
+Depends: ${misc:Depends}, ${python3:Depends}
+Description: Coroutine based etcd client
+ aioetcd
+ =======
+ .
+ [![Build Status](https://travis-ci.org/lisael/aioetcd.svg?branch=master)](https://travis-ci.org/lisael/aioetcd)
+ .
+ Coroutine-based etcd client
+ .
+ Asyncio version of https://github.com/jplana/python-etcd 
+ .
+ ## Quick start
+ .
+ Install etcd and etcdctl https://github.com/coreos/etcd/blob/master/README.md
+ (TL;DR? Have a look at `install` section in .travis.yml)
+ .
+ ```
+ virtualenv --python=python3.4 aioetcd
+ cd aioetcd
+ git clone https://github.com/lisael/aioetcd.git
+ cd aioetcd
+ make vtest # this runs and stops an etcd instance on default ports 4001 and 7001
+
